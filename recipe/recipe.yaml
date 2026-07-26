@@ -13,7 +13,7 @@ source:
   sha256: 996e9d879f095d3ccef55754d3a32d61e1ae03cfaecdcff5e247bfa5b649b27a
 
 build:
-  number: 0
+  number: 1
   # ppc64le stays skipped. `win` is deliberately NOT skipped: upstream ships first-class Windows builds 
   skip: ppc64le
   script:
