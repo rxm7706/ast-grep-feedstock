@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/prefix-dev/recipe-format/main/schema.json
 schema_version: 1
 
 context:
@@ -13,19 +14,43 @@ source:
 
 build:
   number: 0
-  skip: ppc64le or win
+  # ppc64le stays skipped. `win` is deliberately NOT skipped: upstream ships first-class Windows builds 
+  skip: ppc64le
+  script:
+    env:
+      CARGO_PROFILE_RELEASE_STRIP: symbols
+      CARGO_PROFILE_RELEASE_LTO: fat
+      PYTHONUTF8: "1"
+    content:
+      - if: unix
+        then: |
+          export CFLAGS="${CFLAGS} -D_BSD_SOURCE"
+          cargo auditable install --locked --no-track --bins --root "${PREFIX}" --path ./crates/cli
+          cargo-bundle-licenses --format yaml --output THIRDPARTY.yml
+        else: |
+          cargo auditable install --locked --no-track --bins --root %LIBRARY_PREFIX% --path ./crates/cli
+          cargo-bundle-licenses --format yaml --output THIRDPARTY.yml
 
 requirements:
   build:
+    - ${{ compiler('c') }}
+    - ${{ stdlib("c") }}
     - ${{ compiler('cxx') }}
     - ${{ compiler('rust') }}
-    - ${{ stdlib("c") }}
     - cargo-bundle-licenses
+    - cargo-auditable
 
 tests:
   - script:
       - sg --version
       - ast-grep --version
+      - if: unix
+        then:
+          - test -x "${PREFIX}/bin/ast-grep"
+          - test -x "${PREFIX}/bin/sg"
+        else:
+          - if not exist "%LIBRARY_BIN%\ast-grep.exe" exit 1
+          - if not exist "%LIBRARY_BIN%\sg.exe" exit 1
 
 about:
   summary: ast-grep(sg) is a CLI tool for code structural search, lint, and rewriting.
